@@ -5,11 +5,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import sys
+import traceback
 from pathlib import Path
 from typing import Any
+
+
+def _debug_enabled() -> bool:
+    return os.environ.get("CODEX_PPT_DEBUG", "").strip().lower() not in ("", "0", "false", "no")
 
 
 def natural_key(path: Path) -> list[Any]:
@@ -155,5 +161,7 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:
+        if _debug_enabled():
+            traceback.print_exc()
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(1)

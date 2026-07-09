@@ -5,10 +5,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import traceback
 from pathlib import Path
 from typing import Any
+
+
+def _debug_enabled() -> bool:
+    return os.environ.get("CODEX_PPT_DEBUG", "").strip().lower() not in ("", "0", "false", "no")
 
 try:
     from PIL import Image, ImageColor, ImageOps, UnidentifiedImageError
@@ -276,6 +282,8 @@ def main() -> int:
     try:
         return build_pdf(args)
     except Exception as exc:
+        if _debug_enabled():
+            traceback.print_exc()
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

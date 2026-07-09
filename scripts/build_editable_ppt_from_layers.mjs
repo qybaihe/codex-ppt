@@ -8,6 +8,11 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 
+function isMissingPathError(error) {
+  const code = error?.code;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
 function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i += 1) {
@@ -126,15 +131,31 @@ async function importUtils() {
     for (const version of versions) {
       candidates.push(path.join(presentationsRoot, version, "skills/presentations/scripts/artifact_tool_utils.mjs"));
     }
-  } catch {
-    // Running outside a Codex Presentations runtime is supported only when PRESENTATIONS_ARTIFACT_UTILS is set.
+  } catch (error) {
+    // A missing presentations root just means we are running outside a Codex
+    // Presentations runtime (supported when PRESENTATIONS_ARTIFACT_UTILS is set).
+    // Any other error (e.g. permissions) is unexpected and must not be hidden.
+    if (!isMissingPathError(error)) throw error;
   }
   for (const candidate of candidates) {
     try {
       await fs.access(candidate);
-      return import(pathToFileURL(candidate).href);
-    } catch {
-      // try next
+    } catch (error) {
+      // The candidate path does not exist; try the next one. Surface any
+      // other error instead of masking it as "not found".
+      if (isMissingPathError(error)) continue;
+      throw error;
+    }
+    // The module exists: propagate any load/runtime error with context rather
+    // than swallowing it and falling through to the misleading "not found"
+    // path (which also silently triggers the pptxgenjs fallback under auto).
+    try {
+      return await import(pathToFileURL(candidate).href);
+    } catch (error) {
+      throw new Error(
+        `Found Presentations artifact utils at ${candidate} but failed to import it: ${error?.message || error}`,
+        { cause: error },
+      );
     }
   }
   throw new Error("Could not locate Presentations artifact_tool_utils.mjs. Set PRESENTATIONS_ARTIFACT_UTILS.");
@@ -168,8 +189,11 @@ async function findPageDir(root, slideNo) {
     try {
       const stat = await fs.stat(dir);
       if (stat.isDirectory()) return dir;
-    } catch {
-      // continue
+    } catch (error) {
+      // A missing candidate is expected; keep looking. Re-throw anything else
+      // (e.g. permission errors) so it is not hidden behind "could not find".
+      if (isMissingPathError(error)) continue;
+      throw error;
     }
   }
   throw new Error(`Could not find page folder for slide ${slideNo} under ${root}`);
