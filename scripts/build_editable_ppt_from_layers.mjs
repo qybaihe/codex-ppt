@@ -540,7 +540,31 @@ async function main() {
   console.log(JSON.stringify(buildManifest, null, 2));
 }
 
-main().catch((error) => {
-  console.error(error.stack || error.message || String(error));
-  process.exit(1);
-});
+const invokedDirectly =
+  Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error(error.stack || error.message || String(error));
+    process.exit(1);
+  });
+}
+
+export {
+  parseArgs,
+  requireArg,
+  slideSize,
+  pad,
+  visibleStyleValue,
+  lineFillValue,
+  lineWidthValue,
+  hasVisibleTextBoxStyle,
+  collectTextFillViolations,
+  findPageDir,
+  slidesFromTextSpec,
+  assetPosition,
+  normalizePptxColor,
+  pptxScale,
+  toPptxPosition,
+  main,
+};

@@ -15,3 +15,9 @@ tmp/
 .env
 .env.*
 CLAUDE.md
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
