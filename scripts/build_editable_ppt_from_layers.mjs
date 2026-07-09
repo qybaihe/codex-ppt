@@ -64,6 +64,19 @@ function pad(n) {
   return String(n).padStart(2, "0");
 }
 
+function resolveAssetPath(baseDir, file) {
+  if (typeof file !== "string" || file.length === 0) {
+    throw new Error(`Invalid asset file entry in manifest: ${JSON.stringify(file)}`);
+  }
+  const resolvedBase = path.resolve(baseDir);
+  const resolved = path.resolve(resolvedBase, file);
+  const rel = path.relative(resolvedBase, resolved);
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error(`Asset path escapes its slide folder: ${file}`);
+  }
+  return resolved;
+}
+
 function visibleStyleValue(value) {
   if (value === undefined || value === null || value === false) return false;
   if (typeof value === "string") {
@@ -313,7 +326,7 @@ async function addVisualLayers(slide, artifactUtils, pageDir, size, slideNo) {
   const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
   const assets = Array.isArray(manifest.assets) ? manifest.assets : [];
   for (const asset of assets) {
-    await addImageLayer(slide, artifactUtils, path.join(pageDir, asset.file), size, `slide-${pad(slideNo)}-${asset.file}`, asset);
+    await addImageLayer(slide, artifactUtils, resolveAssetPath(pageDir, asset.file), size, `slide-${pad(slideNo)}-${asset.file}`, asset);
   }
   return assets.length;
 }
@@ -325,7 +338,7 @@ async function addVisualLayersPptxGen(slide, pageDir, size, slideNo, scale) {
   for (const asset of assets) {
     const position = assetPosition(asset, size);
     slide.addImage({
-      path: path.join(pageDir, asset.file),
+      path: resolveAssetPath(pageDir, asset.file),
       ...toPptxPosition(position, scale),
       altText: asset.name || `slide-${pad(slideNo)}-${asset.file}`,
     });
