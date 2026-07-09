@@ -7,23 +7,15 @@ import argparse
 import json
 import re
 import shutil
-import sys
 from pathlib import Path
 from typing import Any
 
-
-def natural_key(path: Path) -> list[Any]:
-    parts = re.split(r"(\d+)", path.name.lower())
-    return [int(part) if part.isdigit() else part for part in parts]
+from slide_utils import load_json, natural_key, run_main
 
 
 def slide_number(path: Path, fallback: int) -> int:
     match = re.search(r"(\d+)", path.name)
     return int(match.group(1)) if match else fallback
-
-
-def load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def find_text_layer(slide_dir: Path) -> Path:
@@ -152,8 +144,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except Exception as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+    raise SystemExit(run_main(main))

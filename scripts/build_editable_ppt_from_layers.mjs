@@ -5,6 +5,7 @@ import path from "node:path";
 import os from "node:os";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
+import { readJson, writeJson } from "./lib/json_io.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -310,7 +311,7 @@ function addTextBoxPptxGen(slide, item, index, scale, options = {}) {
 
 async function addVisualLayers(slide, artifactUtils, pageDir, size, slideNo) {
   const manifestPath = path.join(pageDir, "manifest.json");
-  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+  const manifest = await readJson(manifestPath);
   const assets = Array.isArray(manifest.assets) ? manifest.assets : [];
   for (const asset of assets) {
     await addImageLayer(slide, artifactUtils, path.join(pageDir, asset.file), size, `slide-${pad(slideNo)}-${asset.file}`, asset);
@@ -320,7 +321,7 @@ async function addVisualLayers(slide, artifactUtils, pageDir, size, slideNo) {
 
 async function addVisualLayersPptxGen(slide, pageDir, size, slideNo, scale) {
   const manifestPath = path.join(pageDir, "manifest.json");
-  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+  const manifest = await readJson(manifestPath);
   const assets = Array.isArray(manifest.assets) ? manifest.assets : [];
   for (const asset of assets) {
     const position = assetPosition(asset, size);
@@ -386,14 +387,14 @@ async function buildWithPptxGen({
   await fs.mkdir(previewDir, { recursive: true });
   await fs.mkdir(layoutDir, { recursive: true });
   for (let i = 0; i < records.length; i += 1) {
-    await fs.writeFile(path.join(layoutDir, `slide-${pad(i + 1)}.layout.json`), `${JSON.stringify({
+    await writeJson(path.join(layoutDir, `slide-${pad(i + 1)}.layout.json`), {
       backend: "pptxgenjs",
       slide: records[i].slideNumber,
       note: "Layout JSON is a lightweight object summary. Pixel preview rendering requires backend=artifact.",
       pageDir: records[i].pageDir,
       visualLayerCount: records[i].visualLayerCount,
       textCount: records[i].textCount,
-    }, null, 2)}\n`, "utf8");
+    });
   }
 
   const buildManifest = {
@@ -414,8 +415,7 @@ async function buildWithPptxGen({
     textFillViolations,
     slides: records,
   };
-  await fs.mkdir(path.dirname(manifestOut), { recursive: true });
-  await fs.writeFile(manifestOut, `${JSON.stringify(buildManifest, null, 2)}\n`, "utf8");
+  await writeJson(manifestOut, buildManifest);
   console.log(JSON.stringify(buildManifest, null, 2));
 }
 
@@ -440,7 +440,7 @@ async function main() {
     throw new Error(`Unsupported --backend ${backend}; expected auto, artifact, or pptxgenjs.`);
   }
 
-  const textSpec = JSON.parse(await fs.readFile(textJson, "utf8"));
+  const textSpec = await readJson(textJson);
   const slideSpecs = slidesFromTextSpec(textSpec);
   const textFillViolations = collectTextFillViolations(slideSpecs);
   if (failOnTextFill && textFillViolations.length > 0) {
@@ -535,8 +535,7 @@ async function main() {
     slides: records.map(({ slideNumber, pageDir, visualLayerCount, textCount }) => ({ slide: slideNumber, pageDir, visualLayerCount, textCount })),
     previewPaths,
   };
-  await fs.mkdir(path.dirname(manifestOut), { recursive: true });
-  await fs.writeFile(manifestOut, `${JSON.stringify(buildManifest, null, 2)}\n`, "utf8");
+  await writeJson(manifestOut, buildManifest);
   console.log(JSON.stringify(buildManifest, null, 2));
 }
 

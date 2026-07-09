@@ -6,9 +6,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sys
 from pathlib import Path
 from typing import Any
+
+from slide_utils import load_json, natural_key, run_main
 
 try:
     from PIL import Image, ImageColor, ImageOps, UnidentifiedImageError
@@ -19,11 +20,6 @@ except ImportError as exc:  # pragma: no cover
 
 
 SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
-
-
-def natural_key(path: Path) -> list[Any]:
-    parts = re.split(r"(\d+)", path.name.lower())
-    return [int(part) if part.isdigit() else part for part in parts]
 
 
 def parse_size(value: str) -> tuple[int, int]:
@@ -37,7 +33,7 @@ def parse_size(value: str) -> tuple[int, int]:
 
 
 def load_manifest(path: Path) -> list[Path]:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = load_json(path)
     base = path.parent
 
     if isinstance(data, list):
@@ -271,13 +267,8 @@ def make_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    parser = make_parser()
-    args = parser.parse_args()
-    try:
-        return build_pdf(args)
-    except Exception as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
+    args = make_parser().parse_args()
+    return run_main(lambda: build_pdf(args))
 
 
 if __name__ == "__main__":
